@@ -339,32 +339,46 @@ export function GamePage() {
                 <div className="text-xl font-bold">Score: {score}</div>
             </div>
 
-            {/* Game Area */}
-            <div className="relative w-full max-w-2xl mb-8">
-                <MosaicCanvas
-                    imageUrl={currentSkin.imageUrl}
-                    progress={progress}
-                    width={800}
-                    height={800}
-                />
+            {/* Main Content Area: 2 Columns */}
+            <div className="flex flex-col md:flex-row gap-8 w-full max-w-6xl items-start justify-center px-4">
 
-                {/* Feedback Overlay */}
-                {feedback && (
-                    <div className={`absolute inset-0 flex items-center justify-center pointer-events-none z-20 ${feedback === 'CORRECT' ? 'bg-green-500/30' : 'bg-red-500/30'}`}>
-                        <div className={`text-6xl font-black text-white drop-shadow-md transform scale-150 transition-all`}>
-                            {feedback === 'CORRECT' ? 'NICE!' : '-5 SEC!'}
+                {/* Left Column: Game Area (Image) */}
+                <div className="relative w-full max-w-xl flex-shrink-0">
+                    <MosaicCanvas
+                        imageUrl={currentSkin.imageUrl}
+                        progress={progress}
+                        width={800}
+                        height={800}
+                    />
+
+                    {/* Feedback Overlay */}
+                    {feedback && (
+                        <div className={`absolute inset-0 flex items-center justify-center pointer-events-none z-20 ${feedback === 'CORRECT' ? 'bg-green-500/30' : 'bg-red-500/30'}`}>
+                            <div className={`text-6xl font-black text-white drop-shadow-md transform scale-150 transition-all`}>
+                                {feedback === 'CORRECT' ? 'NICE!' : '-5 SEC!'}
+                            </div>
+                        </div>
+                    )}
+                </div>
+
+                {/* Right Column: Input Area */}
+                <div className="w-full max-w-md z-10 mt-4 md:mt-0">
+                    <div className="sticky top-8">
+                        <div className="text-gray-400 mb-2 text-sm">
+                            {language === 'KR' ? '정답을 입력하세요:' : '回答を入力:'}
+                        </div>
+                        <PredictionSearch
+                            skins={allSkins}
+                            language={language}
+                            onSelect={handleSelect}
+                        />
+                        {/* Hint or Instructions could go here */}
+                        <div className="mt-4 text-xs text-gray-500">
+                            * {language === 'KR' ? '목록에서 선택하거나 Enter를 누르세요' : 'リストから選択するかEnterで決定'}
                         </div>
                     </div>
-                )}
-            </div>
+                </div>
 
-            {/* Input Area */}
-            <div className="w-full max-w-lg z-10">
-                <PredictionSearch
-                    skins={allSkins}
-                    language={language}
-                    onSelect={handleSelect}
-                />
             </div>
         </div>
     );
