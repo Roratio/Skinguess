@@ -64,7 +64,7 @@ export function PredictionSearch({ skins, onSelect, language }) {
             />
 
             {filteredParams.length > 0 && (
-                <ul className="absolute bottom-full left-0 w-full bg-gray-800 border border-gray-700 rounded-t-lg shadow-2xl overflow-hidden z-10 mb-1">
+                <ul className="absolute top-full left-0 w-full bg-gray-800 border border-gray-700 rounded-b-lg shadow-2xl overflow-hidden z-10 mt-1">
                     {filteredParams.map((s, idx) => (
                         <li
                             key={s.id}

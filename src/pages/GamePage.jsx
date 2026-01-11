@@ -174,34 +174,34 @@ export function GamePage() {
         const skin = currentResult.skin;
 
         return (
-            <div className="container mx-auto min-h-screen flex flex-col items-center justify-center gap-6 animate-fade-in">
-                <div className="text-3xl font-bold text-gray-400">ANSWER</div>
+            <div className="container mx-auto h-screen flex flex-col items-center justify-center gap-4 animate-fade-in overflow-hidden">
+                <div className="text-2xl font-bold text-gray-400">ANSWER</div>
 
-                <div className="card bg-er-card p-4 rounded-xl border border-gray-700 shadow-2xl">
+                <div className="card bg-er-card p-2 rounded-xl border border-gray-700 shadow-2xl">
                     <img
                         src={skin.imageUrl}
                         alt="Answer"
                         referrerPolicy="no-referrer"
-                        className="max-h-[50vh] object-contain rounded"
+                        className="max-h-[35vh] object-contain rounded"
                     />
                 </div>
 
                 <div className="text-center">
-                    <div className="text-4xl font-bold mb-2">
+                    <div className="text-2xl font-bold mb-1">
                         {language === 'KR' ? skin.nameKr : skin.nameJp}
                     </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-8 w-full max-w-md">
-                    <div className="bg-black/50 p-4 rounded text-center">
-                        <div className="text-gray-400 text-sm">Time</div>
-                        <div className="text-2xl font-mono text-er-primary">
+                <div className="grid grid-cols-2 gap-4 w-full max-w-sm">
+                    <div className="bg-black/50 p-3 rounded text-center">
+                        <div className="text-gray-400 text-xs">Time</div>
+                        <div className="text-xl font-mono text-er-primary">
                             {currentResult.timeTaken.toFixed(2)}s
                         </div>
                     </div>
-                    <div className="bg-black/50 p-4 rounded text-center">
-                        <div className="text-gray-400 text-sm">Score Earned</div>
-                        <div className="text-2xl font-mono text-er-primary">
+                    <div className="bg-black/50 p-3 rounded text-center">
+                        <div className="text-gray-400 text-xs">Score Earned</div>
+                        <div className="text-xl font-mono text-er-primary">
                             +{Math.ceil(currentResult.result === 'WIN' ? (30 - currentResult.timeTaken) : 0)}
                         </div>
                     </div>
@@ -209,7 +209,7 @@ export function GamePage() {
 
                 <button
                     onClick={nextRound}
-                    className="mt-8 px-8 py-4 bg-er-primary text-black font-bold text-xl rounded flex items-center gap-2 hover:brightness-110 transition"
+                    className="mt-4 px-6 py-3 bg-er-primary text-black font-bold text-lg rounded flex items-center gap-2 hover:brightness-110 transition"
                 >
                     NEXT
                     <span className="text-xs bg-black text-white px-2 py-1 rounded ml-2">↵ Enter</span>
