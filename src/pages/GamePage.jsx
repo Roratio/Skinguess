@@ -345,7 +345,7 @@ export function GamePage() {
                     imageUrl={currentSkin.imageUrl}
                     progress={progress}
                     width={800}
-                    height={500}
+                    height={800}
                 />
 
                 {/* Feedback Overlay */}
