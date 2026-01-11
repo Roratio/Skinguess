@@ -51,11 +51,7 @@ export function GamePage() {
         }
     };
 
-    useEffect(() => {
-        if (gameState === 'RESULT') {
-            saveScoreAndGetRank(score);
-        }
-    }, [gameState]);
+
 
     // Global Data
     const [allSkins, setAllSkins] = useState([]);
@@ -74,6 +70,12 @@ export function GamePage() {
     // Feedback
     const [feedback, setFeedback] = useState(null); // 'CORRECT', 'WRONG'
 
+    useEffect(() => {
+        if (gameState === 'RESULT') {
+            saveScoreAndGetRank(score);
+        }
+    }, [gameState]);
+
     // Load Data
     useEffect(() => {
         const loadSkins = async () => {
@@ -90,38 +92,6 @@ export function GamePage() {
         };
         loadSkins();
     }, []);
-
-    // Timer Logic
-    useEffect(() => {
-        if (gameState !== 'PLAYING') return;
-        if (feedback === 'CORRECT') return; // Stop timer/mosaic when answered correctly
-
-        if (timeLeft <= 0) {
-            // Time up logic? Treat as fail or just force reveal?
-            // "正解なら…→残り秒数がスコアになる". If 0, score 0.
-            // Requirement doesn't explicitly say what happens on timeout independently of answer.
-            // Usually game over for that round or force skip?
-            // Let's assume force skip with 0 score and max time taken (30s).
-            handleRoundEnd(false);
-            return;
-        }
-
-        const timer = setInterval(() => {
-            setTimeLeft(prev => Math.max(0, prev - 0.1)); // 100ms updates for smooth slide
-        }, 100);
-
-        return () => clearInterval(timer);
-    }, [gameState, timeLeft, feedback]);
-
-    // Round Result (Answer Reveal) Logic - Enter key support
-    useEffect(() => {
-        if (gameState !== 'ROUND_RESULT') return;
-        const handleKeyDown = (e) => {
-            if (e.key === 'Enter') nextRound();
-        };
-        window.addEventListener('keydown', handleKeyDown);
-        return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [gameState]);
 
     const startGame = (lang) => {
         setLanguage(lang);
@@ -186,6 +156,40 @@ export function GamePage() {
             setGameState('PLAYING');
         }
     };
+
+    // Timer Logic
+    useEffect(() => {
+        if (gameState !== 'PLAYING') return;
+        if (feedback === 'CORRECT') return; // Stop timer/mosaic when answered correctly
+
+        if (timeLeft <= 0) {
+            // Time up logic? Treat as fail or just force reveal?
+            // "正解なら…→残り秒数がスコアになる". If 0, score 0.
+            // Requirement doesn't explicitly say what happens on timeout independently of answer.
+            // Usually game over for that round or force skip?
+            // Let's assume force skip with 0 score and max time taken (30s).
+            handleRoundEnd(false);
+            return;
+        }
+
+        const timer = setInterval(() => {
+            setTimeLeft(prev => Math.max(0, prev - 0.1)); // 100ms updates for smooth slide
+        }, 100);
+
+        return () => clearInterval(timer);
+    }, [gameState, timeLeft, feedback]);
+
+    // Round Result (Answer Reveal) Logic - Enter key support
+    useEffect(() => {
+        if (gameState !== 'ROUND_RESULT') return;
+        const handleKeyDown = (e) => {
+            if (e.key === 'Enter') nextRound();
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [gameState]);
+
+
 
     // Render Helpers
     if (loading) return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
