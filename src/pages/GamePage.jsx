@@ -275,8 +275,24 @@ export function GamePage() {
         const wins = results.filter(r => r.result === 'WIN');
         const bestRecord = wins.length > 0 ? wins.reduce((prev, curr) => curr.timeTaken < prev.timeTaken ? curr : prev) : null;
 
-        const shareText = `Eternal Return Skin Guess\nScore: ${score}\nTOP ${rankData?.topPercent}% !!\nFastest: ${bestRecord ? (language === 'KR' ? bestRecord.skin.nameKr : bestRecord.skin.nameJp) : 'None'}\n#EternalReturn #ER_SkinGuess`;
-        const shareUrl = "https://skinguess.pages.dev"; // Updated URL
+        const shareText = `Eternal Return Skin Guess\nResult: ${score}\n\nTOP ${rankData?.topPercent}%\nFastest: ${bestRecord ? (language === 'KR' ? bestRecord.skin.nameKr : bestRecord.skin.nameJp) : 'None'}\n#EternalReturn #ER_SkinGuess`;
+
+        // Dynamic Share URL Construction
+        const baseUrl = "https://skinguess.pages.dev/share";
+        const params = new URLSearchParams();
+        params.append('score', score);
+        params.append('rank', rankData?.topPercent || '-');
+
+        if (bestRecord) {
+            params.append('time', bestRecord.timeTaken.toFixed(2));
+            const sName = language === 'KR' ? bestRecord.skin.nameKr : bestRecord.skin.nameJp;
+            params.append('skinName', sName);
+            // We use the image URL. Ensure it's absolute if not already.
+            // Google Drive links might need proxies if blocked by satori, but our code uses Drive thumbnails which usually work.
+            params.append('imageUrl', bestRecord.skin.imageUrl);
+        }
+
+        const shareUrl = `${baseUrl}?${params.toString()}`;
         const twitterLink = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}`;
 
         return (
