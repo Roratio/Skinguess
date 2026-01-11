@@ -1,186 +1,61 @@
-// --- RANKING LOGIC ---
-const [rankData, setRankData] = useState(null); // { rank: number, total: number, topPercent: number }
-
-const saveScoreAndGetRank = async (finalScore) => {
-    try {
-        // 1. Save Score
-        await addDoc(collection(db, 'scores'), {
-            score: finalScore,
-            createdAt: new Date(),
-            // could add userId etc if needed
-        });
-
-        // 2. Fetch Ranking Data (Cached)
-        const CACHE_KEY = 'ranking_data';
-        const CACHE_TIME_KEY = 'ranking_timestamp';
-        const CACHE_DURATION = 3 * 60 * 60 * 1000; // 3 hours
-
-        let allScores = [];
-        const cachedData = localStorage.getItem(CACHE_KEY);
-        const cachedTime = localStorage.getItem(CACHE_TIME_KEY);
-        const now = Date.now();
-
-        if (cachedData && cachedTime && (now - parseInt(cachedTime) < CACHE_DURATION)) {
-            // Use Cache
-            console.log("Using cached ranking data");
-            allScores = JSON.parse(cachedData);
-        } else {
-            // Fetch New (Only fetch 'score' field to save bandwidth if possible, but Firestore client pulls doc)
-            console.log("Fetching new ranking data");
-            const q = collection(db, 'scores');
-            const snapshot = await getDocs(q); // Note: reading ALL scores might get expensive if thousands. 
-            // For MVP/small scale this is fine. For larger, standard approach is Aggregation or server-side.
-            allScores = snapshot.docs.map(d => d.data().score);
-
-            // Update Cache
-            localStorage.setItem(CACHE_KEY, JSON.stringify(allScores));
-            localStorage.setItem(CACHE_TIME_KEY, now.toString());
-        }
-
-        // 3. Calculate Rank (Client Side)
-        // Add current score to list for calculation context if not already fetched (since we just saved it, it might not be in cache yet if cache is old, or definitely not if cache is used)
-        // Actually simpler: mix current score into the distribution for percentile calc.
-
-        const currentScoreVal = finalScore;
-        // Filter valid
-        const validScores = allScores.filter(s => typeof s === 'number').concat(currentScoreVal);
-
-        // Sort Descending
-        validScores.sort((a, b) => b - a);
-
-        // Find my position
-        const myRank = validScores.indexOf(currentScoreVal) + 1;
-        const total = validScores.length;
-        const topPercent = (myRank / total) * 100;
-
-        setRankData({
-            rank: myRank,
-            total: total,
-            topPercent: topPercent.toFixed(1)
-        });
-
-    } catch (err) {
-        console.error("Ranking Error:", err);
-        // Fallback
-        setRankData({ rank: '-', total: '-', topPercent: '-' });
-    }
-};
-
-// Calculate Final Results
-useEffect(() => {
-    if (gameState === 'RESULT') {
-        saveScoreAndGetRank(score);
-    }
-}, [gameState]); // run once on entry
-
-if (gameState === 'RESULT') {
-    // Find MVP logic
-    const wins = results.filter(r => r.result === 'WIN');
-    const bestRecord = wins.length > 0 ? wins.reduce((prev, curr) => curr.timeTaken < prev.timeTaken ? curr : prev) : null;
-
-    // MVP Image logic: 
-    // If no wins, show placeholder or user preference? 
-    // Usually show "No MVP" or just generic.
-
-    const shareText = `Eternal Return Skin Guess\nMethod: ${score} Points\nTOP ${rankData?.topPercent}% !!\nFastest: ${bestRecord ? (language === 'KR' ? bestRecord.skin.nameKr : bestRecord.skin.nameJp) : 'None'}\n#EternalReturn #ER_SkinGuess`;
-    const shareUrl = "https://your-game-url.pages.dev"; // Replace with actual URL later or current
-    const twitterLink = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}`;
-
-    return (
-        <div className="container mx-auto min-h-screen flex items-center justify-center py-8">
-            <div className="w-full max-w-5xl bg-er-card border border-gray-700 rounded-xl p-8 shadow-2xl">
-
-                <h2 className="text-3xl font-bold mb-8 text-left text-gray-300">
-                    {language === 'KR' ? '당신이 가장 빨리 맞춘 스킨은...' : 'あなたが一番早く答えたのは...'}
-                </h2>
-
-                <div className="flex flex-col md:flex-row gap-12 items-center">
-
-                    {/* LEFT: MVP Image (Big) */}
-                    <div className="w-full md:w-1/2 flex justify-center bg-black/30 rounded-xl p-4 aspect-square relative border-2 border-er-primary/50">
-                        {bestRecord ? (
-                            <img
-                                src={bestRecord.skin.imageUrl}
-                                alt="MVP"
-                                referrerPolicy="no-referrer"
-                                className="w-full h-full object-contain"
-                            />
-                        ) : (
-                            <div className="flex items-center justify-center h-full text-gray-500">
-                                No Correct Answers
-                            </div>
-                        )}
-                        {/* Label if needed */}
-                        {bestRecord && (
-                            <div className="absolute bottom-4 left-0 w-full text-center">
-                                <span className="bg-black/70 text-white px-4 py-1 rounded text-sm font-bold">
-                                    FASTEST RECORD
-                                </span>
-                            </div>
-                        )}
-                    </div>
-
-                    {/* RIGHT: Stats */}
-                    <div className="w-full md:w-1/2 flex flex-col items-start gap-2">
-
-                        {/* Skin Name */}
-                        <div className="text-4xl font-black mb-1">
-                            {bestRecord ? (language === 'KR' ? bestRecord.skin.nameKr : bestRecord.skin.nameJp) : '-'}
-                        </div>
-
-                        {/* Time */}
-                        <div className="text-5xl font-mono font-bold text-gray-400 mb-8">
-                            {bestRecord ? bestRecord.timeTaken.toFixed(2) : '-.--'}
-                            <span className="text-2xl ml-2">sec</span>
-                        </div>
-
-                        <hr className="w-full border-gray-700 mb-6" />
-
-                        <div className="text-gray-400 text-xl font-bold">
-                            合計点数
-                        </div>
-                        <div className="text-6xl font-black text-er-primary mb-2">
-                            {score} <span className="text-3xl text-white">点でした</span>
-                        </div>
-
-                        <div className="flex items-end gap-2 mb-8">
-                            <div className="text-4xl font-bold text-gray-300">TOP</div>
-                            <div className="text-6xl font-bold text-yellow-400">
-                                {rankData ? rankData.topPercent : '--'}%
-                            </div>
-                        </div>
-
-                        {/* Buttons */}
-                        <div className="flex flex-wrap gap-4 w-full">
-                            <a
-                                href={twitterLink}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="flex-1 bg-black hover:bg-gray-800 text-white font-bold py-4 px-6 rounded-lg flex items-center justify-center gap-2 border border-gray-600 transition"
-                            >
-                                <svg viewBox="0 0 24 24" className="w-6 h-6 fill-current"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"></path></svg>
-                                Share Result
-                            </a>
-                            <button
-                                onClick={() => setGameState('START')}
-                                className="flex-1 bg-er-primary hover:bg-yellow-400 text-black font-bold py-4 px-6 rounded-lg transition"
-                            >
-                                タイトルに戻る
-                            </button>
-                        </div>
-
-                    </div>
-                </div>
-            </div>
-        </div>
-    );
-}
+import React, { useState, useEffect, useCallback } from 'react';
+import { collection, getDocs, addDoc } from 'firebase/firestore';
+import { db } from '../firebase';
 import { MosaicCanvas } from '../components/MosaicCanvas';
 import { PredictionSearch } from '../components/PredictionSearch';
 import { useNavigate } from 'react-router-dom';
 
 export function GamePage() {
     const navigate = useNavigate();
+
+    // --- RANKING LOGIC ---
+    const [rankData, setRankData] = useState(null);
+
+    const saveScoreAndGetRank = async (finalScore) => {
+        try {
+            await addDoc(collection(db, 'scores'), {
+                score: finalScore,
+                createdAt: new Date(),
+            });
+
+            const CACHE_KEY = 'ranking_data';
+            const CACHE_TIME_KEY = 'ranking_timestamp';
+            const CACHE_DURATION = 3 * 60 * 60 * 1000;
+
+            let allScores = [];
+            const cachedData = localStorage.getItem(CACHE_KEY);
+            const cachedTime = localStorage.getItem(CACHE_TIME_KEY);
+            const now = Date.now();
+
+            if (cachedData && cachedTime && (now - parseInt(cachedTime) < CACHE_DURATION)) {
+                allScores = JSON.parse(cachedData);
+            } else {
+                const q = collection(db, 'scores');
+                const snapshot = await getDocs(q);
+                allScores = snapshot.docs.map(d => d.data().score);
+
+                localStorage.setItem(CACHE_KEY, JSON.stringify(allScores));
+                localStorage.setItem(CACHE_TIME_KEY, now.toString());
+            }
+
+            const validScores = allScores.filter(s => typeof s === 'number').concat(finalScore);
+            validScores.sort((a, b) => b - a);
+            const myRank = validScores.indexOf(finalScore) + 1;
+            const total = validScores.length;
+            const topPercent = (myRank / total) * 100;
+
+            setRankData({ rank: myRank, total, topPercent: topPercent.toFixed(1) });
+        } catch (err) {
+            console.error("Ranking Error:", err);
+            setRankData({ rank: '-', total: '-', topPercent: '-' });
+        }
+    };
+
+    useEffect(() => {
+        if (gameState === 'RESULT') {
+            saveScoreAndGetRank(score);
+        }
+    }, [gameState]);
 
     // Global Data
     const [allSkins, setAllSkins] = useState([]);
@@ -393,10 +268,12 @@ export function GamePage() {
     }
 
     if (gameState === 'RESULT') {
-        // Find MVP logic
-        // Best Time (lowest timeTaken) among WIN results
         const wins = results.filter(r => r.result === 'WIN');
         const bestRecord = wins.length > 0 ? wins.reduce((prev, curr) => curr.timeTaken < prev.timeTaken ? curr : prev) : null;
+
+        const shareText = `Eternal Return Skin Guess\nScore: ${score}\nTOP ${rankData?.topPercent}% !!\nFastest: ${bestRecord ? (language === 'KR' ? bestRecord.skin.nameKr : bestRecord.skin.nameJp) : 'None'}\n#EternalReturn #ER_SkinGuess`;
+        const shareUrl = "https://skinguess.pages.dev"; // Updated URL
+        const twitterLink = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}`;
 
         return (
             <div className="container mx-auto py-8">
@@ -404,9 +281,14 @@ export function GamePage() {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
                     {/* Score Card */}
-                    <div className="card bg-er-card p-8 flex flex-col items-center justify-center">
+                    <div className="card bg-er-card p-8 flex flex-col items-center justify-center relative">
                         <div className="text-gray-400 mb-2">Total Score</div>
-                        <div className="text-6xl font-black text-er-primary">{score}</div>
+                        <div className="text-6xl font-black text-er-primary mb-4">{score}</div>
+
+                        {/* Ranking Badge */}
+                        <div className="bg-black/50 px-4 py-2 rounded text-xl">
+                            TOP <span className="text-yellow-400 font-bold">{rankData ? rankData.topPercent : '--'}%</span>
+                        </div>
                     </div>
 
                     {/* MVP Card */}
@@ -418,6 +300,7 @@ export function GamePage() {
                                 <img
                                     src={bestRecord.skin.imageUrl}
                                     alt="MVP"
+                                    referrerPolicy="no-referrer"
                                     className="h-32 object-contain mb-4 rounded"
                                 />
                                 <div className="text-2xl font-bold mb-1">
@@ -472,7 +355,17 @@ export function GamePage() {
                     >
                         タイトルに戻る
                     </button>
-                    {/* Twitter Share link could go here */}
+
+                    <a
+                        href={twitterLink}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="px-6 py-3 bg-black border border-gray-600 text-white font-bold rounded flex items-center gap-2 hover:bg-gray-800 transition"
+                    >
+                        {/* Simple X Icon */}
+                        <svg viewBox="0 0 24 24" className="w-5 h-5 fill-current"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"></path></svg>
+                        Share Result
+                    </a>
                 </div>
             </div>
         );
