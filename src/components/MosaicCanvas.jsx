@@ -45,33 +45,41 @@ export function MosaicCanvas({ imageUrl, progress, width = 600, height = 400 }) 
         const w = canvas.width;
         const h = canvas.height;
 
-        // Pass 1: Draw small
-        // We need a temp canvas or just simple drawImage params
-        // ctx.imageSmoothingEnabled = false; // Key for pixelation
-
         // 1. Clear
         ctx.clearRect(0, 0, w, h);
 
         // 2. Turn off smoothing
         ctx.imageSmoothingEnabled = false;
 
-        // 3. Draw image reduced
-        const sw = Math.max(1, Math.floor(w * safeProgress));
-        const sh = Math.max(1, Math.floor(h * safeProgress));
+        // --- Aspect Ratio Logic ---
+        const img = imgRef.current;
+        const iw = img.width;
+        const ih = img.height;
 
-        // Draw to offscreen canvas (or just trick with drawImage)
-        // Ideally: Draw image to valid small rect, then draw that small rect back to full canvas.
-        // But we can't do that easily on one canvas without reading back.
-        // Actually we can do it with an offscreen canvas.
+        // Calculate scale to fit (contain)
+        const scale = Math.min(w / iw, h / ih);
+        const dw = iw * scale;
+        const dh = ih * scale;
 
+        // Center the image
+        const dx = (w - dw) / 2;
+        const dy = (h - dh) / 2;
+
+        // 3. Draw image reduced (Mosaic Effect)
+        // We calculate the small size based on the DESTINATION dimensions (dw, dh)
+        const sw = Math.max(1, Math.floor(dw * safeProgress));
+        const sh = Math.max(1, Math.floor(dh * safeProgress));
+
+        // Draw to offscreen canvas
         const offscreen = document.createElement('canvas');
         offscreen.width = sw;
         offscreen.height = sh;
         const offCtx = offscreen.getContext('2d');
-        offCtx.drawImage(imgRef.current, 0, 0, sw, sh);
+        // Draw full image into small offscreen canvas (it gets squashed/pixelated here)
+        offCtx.drawImage(img, 0, 0, sw, sh);
 
-        // 4. Draw back scaled up
-        ctx.drawImage(offscreen, 0, 0, sw, sh, 0, 0, w, h);
+        // 4. Draw back scaled up into the calculated centered rect
+        ctx.drawImage(offscreen, 0, 0, sw, sh, dx, dy, dw, dh);
     };
 
     return (
