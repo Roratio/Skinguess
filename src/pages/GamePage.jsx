@@ -45,6 +45,8 @@ export function GamePage() {
     // Timer Logic
     useEffect(() => {
         if (gameState !== 'PLAYING') return;
+        if (feedback === 'CORRECT') return; // Stop timer/mosaic when answered correctly
+
         if (timeLeft <= 0) {
             // Time up logic? Treat as fail or just force reveal?
             // "正解なら…→残り秒数がスコアになる". If 0, score 0.
@@ -60,7 +62,17 @@ export function GamePage() {
         }, 100);
 
         return () => clearInterval(timer);
-    }, [gameState, timeLeft]);
+    }, [gameState, timeLeft, feedback]);
+
+    // Round Result (Answer Reveal) Logic - Enter key support
+    useEffect(() => {
+        if (gameState !== 'ROUND_RESULT') return;
+        const handleKeyDown = (e) => {
+            if (e.key === 'Enter') nextRound();
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [gameState]);
 
     const startGame = (lang) => {
         setLanguage(lang);
@@ -94,9 +106,9 @@ export function GamePage() {
             const timeTaken = 30 - timeLeft;
             setResults(prev => [...prev, { skin: currentSkin, timeTaken, result: 'WIN' }]);
 
-            // Delay for effect then next round
+            // Wait a moment then show Answer Reveal
             setTimeout(() => {
-                nextRound();
+                setGameState('ROUND_RESULT');
             }, 1000);
         } else {
             // WRONG
@@ -108,9 +120,12 @@ export function GamePage() {
 
     const handleRoundEnd = (isTimeout) => {
         // Called when time runs out without correct answer
+        // Show Reveal even if timeout? Or just skip? 
+        // User asked for reveal after "NICE!", implying win state.
+        // For timeout, let's also show reveal for consistency so they know what it was.
         const currentSkin = gameConfigs[currentRound];
         setResults(prev => [...prev, { skin: currentSkin, timeTaken: 30, result: 'LOSE' }]);
-        nextRound();
+        setGameState('ROUND_RESULT');
     };
 
     const nextRound = () => {
@@ -119,6 +134,7 @@ export function GamePage() {
         } else {
             setCurrentRound(prev => prev + 1);
             startRound();
+            setGameState('PLAYING');
         }
     };
 
@@ -148,6 +164,56 @@ export function GamePage() {
                     全 {allSkins.length} 問搭載 / 1プレイ 10問
                 </div>
                 <a href="/admin" className="text-gray-600 underline text-sm">管理画面へ</a>
+            </div>
+        );
+    }
+
+    // ROUND_RESULT Screen (Answer Reveal)
+    if (gameState === 'ROUND_RESULT') {
+        const currentResult = results[results.length - 1];
+        const skin = currentResult.skin;
+
+        return (
+            <div className="container mx-auto min-h-screen flex flex-col items-center justify-center gap-6 animate-fade-in">
+                <div className="text-3xl font-bold text-gray-400">ANSWER</div>
+
+                <div className="card bg-er-card p-4 rounded-xl border border-gray-700 shadow-2xl">
+                    <img
+                        src={skin.imageUrl}
+                        alt="Answer"
+                        referrerPolicy="no-referrer"
+                        className="max-h-[50vh] object-contain rounded"
+                    />
+                </div>
+
+                <div className="text-center">
+                    <div className="text-4xl font-bold mb-2">
+                        {language === 'KR' ? skin.nameKr : skin.nameJp}
+                    </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-8 w-full max-w-md">
+                    <div className="bg-black/50 p-4 rounded text-center">
+                        <div className="text-gray-400 text-sm">Time</div>
+                        <div className="text-2xl font-mono text-er-primary">
+                            {currentResult.timeTaken.toFixed(2)}s
+                        </div>
+                    </div>
+                    <div className="bg-black/50 p-4 rounded text-center">
+                        <div className="text-gray-400 text-sm">Score Earned</div>
+                        <div className="text-2xl font-mono text-er-primary">
+                            +{Math.ceil(currentResult.result === 'WIN' ? (30 - currentResult.timeTaken) : 0)}
+                        </div>
+                    </div>
+                </div>
+
+                <button
+                    onClick={nextRound}
+                    className="mt-8 px-8 py-4 bg-er-primary text-black font-bold text-xl rounded flex items-center gap-2 hover:brightness-110 transition"
+                >
+                    NEXT
+                    <span className="text-xs bg-black text-white px-2 py-1 rounded ml-2">↵ Enter</span>
+                </button>
             </div>
         );
     }
